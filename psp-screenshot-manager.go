@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 )
 
 type Game struct {
@@ -53,7 +54,7 @@ func main() {
 
 		Filepath struct {
 			PathToMe string //the first argument will be the name of this file
-			Filename string
+			PathName string
 			Trailing []string
 		} `positional-args:"yes" required:"yes"`
 	}
@@ -66,5 +67,22 @@ func main() {
 	gameDB := loadGames()
 
 	gameDB = gameDB
-	fmt.Println(opts.Filepath.Filename)
+
+	fmt.Printf("Scanning %v...\n", opts.Filepath.PathName)
+	screenshots := make(map[string][]string)
+	err = filepath.Walk(opts.Filepath.PathName, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", opts.Filepath.PathName, err)
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		// fmt.Printf("visited file: %q\n", path)
+		relpath := path[len(opts.Filepath.PathName):]
+		_, filename := filepath.Split(relpath)
+		screenshots[filepath.Dir(relpath)] = append(screenshots[filepath.Dir(relpath)], filename)
+		return nil
+	})
+
 }
