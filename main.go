@@ -16,13 +16,13 @@ type Game struct {
 	category string
 }
 
-func main() {
-	gameDB, err := os.Open("games.csv")
+func loadGames() []Game {
+	gameCSV, err := os.Open("games.csv")
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 		log.Fatal("(you can get games.csv from https://github.com/Lynnesbian/psp-screenshot-manager/blob/master/games.csv)")
 	}
-	reader := csv.NewReader(bufio.NewReader(gameDB))
+	reader := csv.NewReader(bufio.NewReader(gameCSV))
 	var games []Game
 	_, _ = reader.Read() //discard the first line, it's just the header
 
@@ -42,5 +42,10 @@ func main() {
 			category: line[3],
 		})
 	} //end csv reader loop
+	return games
+}
 
+func main() {
+	gameDB := loadGames()
+	fmt.Println(gameDB)
 }
