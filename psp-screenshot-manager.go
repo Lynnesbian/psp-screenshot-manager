@@ -8,7 +8,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 )
 
 type Game struct {
@@ -16,6 +18,17 @@ type Game struct {
 	name     string
 	longname string
 	category string
+}
+
+func UserHomeDir() string { //https://stackoverflow.com/a/7922977/4480824
+	if runtime.GOOS == "windows" {
+		home := os.Getenv("HOMEDRIVE") + os.Getenv("HOMEPATH")
+		if home == "" {
+			home = os.Getenv("USERPROFILE")
+		}
+		return home
+	}
+	return os.Getenv("HOME")
 }
 
 func loadGames() []Game {
@@ -50,7 +63,8 @@ func loadGames() []Game {
 func main() {
 
 	var opts struct {
-		overwrite bool `short:"o" long:"overwrite" description:"Overwrite existing screenshots of the same name. If not provided, will rename files to avoid overwriting."`
+		Overwrite       bool   `short:"w" long:"overwrite" description:"Overwrite existing screenshots of the same name. If not provided, will rename files to avoid overwriting."`
+		OutputDirectory string `short:"o" long:"output-directory" default:"/home/lynne/Pictures/PSP Screenshots" description:"Directory to output to. Defaults to ~/Pictures/PSP Screenshots"`
 
 		Filepath struct {
 			PathToMe string //the first argument will be the name of this file
@@ -69,10 +83,11 @@ func main() {
 	gameDB = gameDB
 
 	fmt.Printf("Scanning %v...\n", opts.Filepath.PathName)
+	fmt.Println(opts.OutputDirectory)
 	screenshots := make(map[string][]string)
 	err = filepath.Walk(opts.Filepath.PathName, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			fmt.Printf("prevent panic by handling failure accessing a path %q: %v\n", opts.Filepath.PathName, err)
+			log.Fatal(err)
 			return err
 		}
 		if info.IsDir() {
@@ -81,8 +96,31 @@ func main() {
 		// fmt.Printf("visited file: %q\n", path)
 		relpath := path[len(opts.Filepath.PathName):]
 		_, filename := filepath.Split(relpath)
-		screenshots[filepath.Dir(relpath)] = append(screenshots[filepath.Dir(relpath)], filename)
+		//[1:] to trim the trailing slash
+		screenshots[filepath.Dir(relpath)[1:]] = append(screenshots[filepath.Dir(relpath)], filename)
 		return nil
 	})
-
+	for folder, files := range screenshots {
+		//determine the game's name from its serial
+		gameName := "Unknown"
+		for _, game := range gameDB {
+			if game.serial == folder {
+				gameName = game.name
+				break
+			}
+		}
+		//make the folder to put the screenshots in
+		saveLocation := fmt.Sprintf("%v/%v", opts.OutputDirectory, gameName)
+		err = os.MkdirAll(saveLocation, os.ModePerm)
+		if err != nil {
+			panic(err) //todo: not this
+		}
+		for _, file := range files {
+			fullpath := fmt.Sprintf("%v/%v/%v", opts.Filepath.PathName, folder, file)
+			fullpath = fullpath
+			cmd := exec.Command("convert", fullpath, saveLocation+file+".png")
+			err := cmd.Run()
+			fmt.Println(err)
+		}
+	}
 }
