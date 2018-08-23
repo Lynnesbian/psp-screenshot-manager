@@ -63,8 +63,8 @@ func loadGames() []Game {
 func main() {
 
 	var opts struct {
-		Overwrite       bool   `short:"w" long:"overwrite" description:"Overwrite existing screenshots of the same name. If not provided, will rename files to avoid overwriting."`
-		OutputDirectory string `short:"o" long:"output-directory" default:"/home/lynne/Pictures/PSP Screenshots" description:"Directory to output to. Defaults to ~/Pictures/PSP Screenshots"`
+		Collision       string `short:"c" long:"collision" default:"skip" description:"How to handle filename collisions. Options are 'overwrite', 'skip', and 'rename'." choice:"skip" choice:"overwrite" choice:"rename"`
+		OutputDirectory string `short:"o" long:"output-directory" default:"/home/lynne/Pictures/PSP Screenshots" description:"Directory to output to."`
 
 		Filepath struct {
 			PathToMe string //the first argument will be the name of this file
@@ -97,7 +97,7 @@ func main() {
 		relpath := path[len(opts.Filepath.PathName):]
 		_, filename := filepath.Split(relpath)
 		//[1:] to trim the trailing slash
-		screenshots[filepath.Dir(relpath)[1:]] = append(screenshots[filepath.Dir(relpath)], filename)
+		screenshots[filepath.Dir(relpath)[1:]] = append(screenshots[filepath.Dir(relpath)[1:]], filename)
 		return nil
 	})
 	for folder, files := range screenshots {
@@ -115,12 +115,20 @@ func main() {
 		if err != nil {
 			panic(err) //todo: not this
 		}
+
 		for _, file := range files {
+			if filepath.Ext(file) != ".bmp" {
+				continue
+			}
+			fmt.Printf("Converting %v...\r", file)
 			fullpath := fmt.Sprintf("%v/%v/%v", opts.Filepath.PathName, folder, file)
 			fullpath = fullpath
-			cmd := exec.Command("convert", fullpath, saveLocation+file+".png")
+			outputName := fmt.Sprintf("%v/%v.png", saveLocation, file)
+			cmd := exec.Command("convert", fullpath, outputName)
 			err := cmd.Run()
-			fmt.Println(err)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 }
