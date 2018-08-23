@@ -80,8 +80,6 @@ func main() {
 
 	gameDB := loadGames()
 
-	gameDB = gameDB
-
 	fmt.Printf("Scanning %v...\n", opts.Filepath.PathName)
 	fmt.Println(opts.OutputDirectory)
 	screenshots := make(map[string][]string)
@@ -122,7 +120,6 @@ func main() {
 			}
 			fmt.Printf("Converting %v...\r", file)
 			fullpath := fmt.Sprintf("%v/%v/%v", opts.Filepath.PathName, folder, file)
-			fullpath = fullpath
 			outputName := fmt.Sprintf("%v/%v.png", saveLocation, file)
 			cmd := exec.Command("convert", fullpath, outputName)
 			err := cmd.Run()
